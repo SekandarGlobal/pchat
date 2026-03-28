@@ -29,27 +29,19 @@ import { ChatData, MessageData, UserData, TypingData, PresenceData } from "@/lib
 
 interface ChatAreaProps {
   chatId: string | null;
-  onStartChat?: (userId: string) => Promise<string | void>;
   onBack?: () => void;
 }
 
 function LinkifiedText({ text }: { text: string }) {
   const urlRegex = /(https?:\/\/[^\s]+)/g;
   const parts = text.split(urlRegex);
-
   return (
     <>
       {parts.map((part, i) => {
         if (urlRegex.test(part)) {
           return (
-            <a
-              key={i}
-              className="message-link"
-              href={part}
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={(e) => e.stopPropagation()}
-            >
+            <a key={i} className="message-link" href={part} target="_blank" rel="noopener noreferrer"
+              onClick={(e) => e.stopPropagation()}>
               {part}
             </a>
           );
@@ -85,35 +77,28 @@ export default function ChatArea({ chatId, onBack }: ChatAreaProps) {
   const checkNearBottom = useCallback(() => {
     const container = messagesContainerRef.current;
     if (!container) return;
-    isNearBottomRef.current =
-      container.scrollHeight - container.scrollTop - container.clientHeight < 100;
+    isNearBottomRef.current = container.scrollHeight - container.scrollTop - container.clientHeight < 100;
   }, []);
 
   const forceScrollBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, []);
 
-  // Load chat data
   const prevChatIdRef = useRef<string | null>(null);
   useEffect(() => {
     if (!chatId || !user) return;
-
     let cleanup: (() => void) | undefined;
-
     const loadChat = async () => {
-      // Only reset state if chat actually changed
       if (prevChatIdRef.current !== chatId) {
         prevChatIdRef.current = chatId;
         setOtherUserName("");
         setOtherUserOnline(false);
         setChatData(null);
       }
-
       const chatSnap = await getDoc(doc(db, "chats", chatId));
       if (!chatSnap.exists()) return;
       const data = chatSnap.data() as ChatData;
       setChatData(data);
-
       if (data.type === "direct") {
         const otherId = data.participants.find((id) => id !== user.uid);
         if (otherId) {
@@ -135,13 +120,9 @@ export default function ChatArea({ chatId, onBack }: ChatAreaProps) {
     return () => { cleanup?.(); };
   }, [chatId, user]);
 
-  // Listen for messages
   useEffect(() => {
     if (!chatId || !user) return;
-    const q = query(
-      collection(db, "chats", chatId, "messages"),
-      orderBy("timestamp", "asc")
-    );
+    const q = query(collection(db, "chats", chatId, "messages"), orderBy("timestamp", "asc"));
     return onSnapshot(q, async (snapshot) => {
       const msgs: (MessageData & { id: string })[] = [];
       for (const msgDoc of snapshot.docs) {
@@ -164,7 +145,6 @@ export default function ChatArea({ chatId, onBack }: ChatAreaProps) {
     });
   }, [chatId, user, forceScrollBottom]);
 
-  // Listen for typing
   useEffect(() => {
     if (!chatId) return;
     return onValue(ref(rtdb, "typing"), (snap) => {
@@ -172,9 +152,7 @@ export default function ChatArea({ chatId, onBack }: ChatAreaProps) {
       const names: string[] = [];
       snap.forEach((child) => {
         const val = child.val() as TypingData;
-        if (val.chatId === chatId && child.key !== user?.uid) {
-          names.push(val.name);
-        }
+        if (val.chatId === chatId && child.key !== user?.uid) names.push(val.name);
       });
       setTypingUsers(names);
     });
@@ -196,8 +174,7 @@ export default function ChatArea({ chatId, onBack }: ChatAreaProps) {
     const text = messageInput.trim();
     setMessageInput("");
     await addDoc(collection(db, "chats", chatId, "messages"), {
-      senderId: user.uid,
-      senderName: userData.name || userData.username,
+      senderId: user.uid, senderName: userData.name || userData.username,
       text, timestamp: serverTimestamp(), edited: false, deletedFor: [], seenBy: [],
     });
     await updateDoc(doc(db, "chats", chatId), {
@@ -219,17 +196,12 @@ export default function ChatArea({ chatId, onBack }: ChatAreaProps) {
 
   const deleteForMe = useCallback(async (msgId: string) => {
     if (!chatId || !user) return;
-    await updateDoc(doc(db, "chats", chatId, "messages", msgId), {
-      deletedFor: arrayUnion(user.uid),
-    });
+    await updateDoc(doc(db, "chats", chatId, "messages", msgId), { deletedFor: arrayUnion(user.uid) });
   }, [chatId, user]);
 
   const deleteForEveryone = useCallback(async (msgId: string) => {
     if (!chatId || !chatData) return;
-    const allUids = chatData.participants;
-    await updateDoc(doc(db, "chats", chatId, "messages", msgId), {
-      deletedFor: allUids,
-    });
+    await updateDoc(doc(db, "chats", chatId, "messages", msgId), { deletedFor: chatData.participants });
   }, [chatId, chatData]);
 
   const copyText = useCallback((text: string, msgId: string) => {
@@ -242,11 +214,9 @@ export default function ChatArea({ chatId, onBack }: ChatAreaProps) {
     (e: React.MouseEvent, msgId: string, isSent: boolean) => {
       e.preventDefault();
       setContextMenu({ id: msgId, x: Math.min(e.clientX, window.innerWidth - 200), y: Math.min(e.clientY, window.innerHeight - 250), isSent });
-    },
-    []
+    }, []
   );
 
-  // Long press for mobile
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const handleTouchStart = useCallback((msgId: string, isSent: boolean) => {
     longPressTimer.current = setTimeout(() => {
@@ -263,7 +233,6 @@ export default function ChatArea({ chatId, onBack }: ChatAreaProps) {
     return () => window.removeEventListener("click", close);
   }, []);
 
-  // Add member search
   const handleMemberSearch = useCallback((value: string) => {
     setMemberSearch(value);
     if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
@@ -289,13 +258,9 @@ export default function ChatArea({ chatId, onBack }: ChatAreaProps) {
 
   const addMember = useCallback(async (userId: string) => {
     if (!chatId) return;
-    await updateDoc(doc(db, "chats", chatId), {
-      participants: arrayUnion(userId),
-    });
+    await updateDoc(doc(db, "chats", chatId), { participants: arrayUnion(userId) });
     setChatData((prev) => prev ? { ...prev, participants: [...prev.participants, userId] } : null);
-    setMemberSearch("");
-    setMemberResults([]);
-    setShowAddMember(false);
+    setMemberSearch(""); setMemberResults([]); setShowAddMember(false);
   }, [chatId]);
 
   const formatMessageTime = (timestamp: Timestamp | null) => {
@@ -306,84 +271,14 @@ export default function ChatArea({ chatId, onBack }: ChatAreaProps) {
     return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
   };
 
-  // Render messages
-  const renderedMessages = messages.map((msg) => {
-    const isSent = msg.senderId === user?.uid;
-    const seenBy = (msg.seenBy || []).filter((id) => id !== user?.uid);
-    let seenStatus: string | null = null;
-    if (isSent) {
-      if (chatData?.type === "group") {
-        const others = chatData.participants.filter((id) => id !== user?.uid);
-        if (seenBy.length === others.length && others.length > 0) seenStatus = "Seen by all";
-        else if (seenBy.length > 0) seenStatus = `Seen by ${seenBy.length}`;
-      } else {
-        if (seenBy.length > 0) seenStatus = "Seen";
-      }
-    }
-
-    return (
-      <div
-        key={msg.id}
-        className={`message-wrapper ${isSent ? "sent" : "received"}`}
-        onContextMenu={(e) => handleContextMenu(e, msg.id, isSent)}
-        onTouchStart={() => handleTouchStart(msg.id, isSent)}
-        onTouchEnd={handleTouchEnd}
-        onTouchCancel={handleTouchEnd}
-      >
-        {chatData?.type === "group" && !isSent && (
-          <div className="message-sender-name">{msg.senderName}</div>
-        )}
-        <div className="message-bubble">
-          <LinkifiedText text={msg.text} />
-        </div>
-        <div className="message-meta">
-          {msg.timestamp && <span className="message-time">{formatMessageTime(msg.timestamp)}</span>}
-          {msg.edited && <span className="message-edited">edited</span>}
-          {seenStatus && (
-            <span className="message-seen">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M20 6L9 17l-5-5" />
-              </svg>
-              {seenStatus}
-            </span>
-          )}
-        </div>
-        <div className="message-actions-row">
-          <button
-            className="message-action-btn-sm"
-            onClick={() => copyText(msg.text, msg.id)}
-            title="Copy"
-          >
-            {copiedId === msg.id ? "Copied!" : "Copy"}
-          </button>
-          {msg.text.match(/https?:\/\//) && (
-            <button
-              className="message-action-btn-sm"
-              onClick={() => {
-                const url = msg.text.match(/(https?:\/\/[^\s]+)/)?.[0];
-                if (url) window.open(url, "_blank");
-              }}
-              title="Open link"
-            >
-              Open
-            </button>
-          )}
-        </div>
-      </div>
-    );
-  });
-
+  // No chat selected - show ZCHAT branding
   if (!chatId) {
     return (
       <div className="chat-main">
         <div className="no-chat-selected">
-          <div className="no-chat-icon">
-            <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-              <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" />
-            </svg>
-          </div>
-          <h3>Welcome to ChatApp</h3>
-          <p>Search for users or select a chat to start messaging</p>
+          <div className="zchat-logo">ZCHAT</div>
+          <p className="zchat-subtitle">Fast. Secure. Simple.</p>
+          <p className="zchat-hint">Select a conversation or tap + to start chatting</p>
         </div>
       </div>
     );
@@ -392,15 +287,13 @@ export default function ChatArea({ chatId, onBack }: ChatAreaProps) {
   return (
     <div className="chat-main">
       <div className="chat-active">
-        {/* Chat Header */}
+        {/* Chat Header - always shows back button */}
         <div className="chat-header">
-          {onBack && (
-            <button className="btn-back-sidebar" onClick={onBack} style={{ display: "flex" }}>
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M19 12H5M12 19l-7-7 7-7" />
-              </svg>
-            </button>
-          )}
+          <button className="btn-back-sidebar" onClick={onBack} style={{ display: "flex" }}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M19 12H5M12 19l-7-7 7-7" />
+            </svg>
+          </button>
           <div className="chat-header-info">
             <h3>{otherUserName || "Chat"}</h3>
             {chatData?.type === "direct" ? (
@@ -427,25 +320,17 @@ export default function ChatArea({ chatId, onBack }: ChatAreaProps) {
         {/* Add member panel */}
         {showAddMember && chatData?.type === "group" && (
           <div style={{ padding: "12px 16px", borderBottom: "1px solid var(--border-color)", background: "var(--bg-secondary)" }}>
-            <input
-              type="text"
-              placeholder="Search user to add..."
-              value={memberSearch}
+            <input type="text" placeholder="Search user to add..." value={memberSearch}
               onChange={(e) => handleMemberSearch(e.target.value)}
               style={{
                 width: "100%", padding: "10px 14px", border: "1px solid var(--border-color)",
                 borderRadius: "var(--radius-full)", background: "var(--bg-tertiary)",
                 color: "var(--text-primary)", fontSize: 14, outline: "none", fontFamily: "inherit",
-              }}
-            />
+              }} />
             {memberResults.length > 0 && (
               <div style={{ marginTop: 8 }}>
                 {memberResults.map((u) => (
-                  <div
-                    key={u.id}
-                    className="search-result-item"
-                    onClick={() => addMember(u.id)}
-                  >
+                  <div key={u.id} className="search-result-item" onClick={() => addMember(u.id)}>
                     <div className="search-result-avatar">{(u.name || u.username || "?").charAt(0).toUpperCase()}</div>
                     <div className="search-result-info">
                       <div className="search-result-name">{u.name}</div>
@@ -460,7 +345,52 @@ export default function ChatArea({ chatId, onBack }: ChatAreaProps) {
 
         {/* Messages */}
         <div className="messages-container" ref={messagesContainerRef} onScroll={checkNearBottom}>
-          {renderedMessages}
+          {messages.map((msg) => {
+            const isSent = msg.senderId === user?.uid;
+            const seenBy = (msg.seenBy || []).filter((id) => id !== user?.uid);
+            let seenStatus: string | null = null;
+            if (isSent) {
+              if (chatData?.type === "group") {
+                const others = chatData.participants.filter((id) => id !== user?.uid);
+                if (seenBy.length === others.length && others.length > 0) seenStatus = "Seen by all";
+                else if (seenBy.length > 0) seenStatus = `Seen by ${seenBy.length}`;
+              } else {
+                if (seenBy.length > 0) seenStatus = "Seen";
+              }
+            }
+            return (
+              <div key={msg.id} className={`message-wrapper ${isSent ? "sent" : "received"}`}
+                onContextMenu={(e) => handleContextMenu(e, msg.id, isSent)}
+                onTouchStart={() => handleTouchStart(msg.id, isSent)}
+                onTouchEnd={handleTouchEnd} onTouchCancel={handleTouchEnd}>
+                {chatData?.type === "group" && !isSent && (
+                  <div className="message-sender-name">{msg.senderName}</div>
+                )}
+                <div className="message-bubble"><LinkifiedText text={msg.text} /></div>
+                <div className="message-meta">
+                  {msg.timestamp && <span className="message-time">{formatMessageTime(msg.timestamp)}</span>}
+                  {msg.edited && <span className="message-edited">edited</span>}
+                  {seenStatus && (
+                    <span className="message-seen">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 6L9 17l-5-5" /></svg>
+                      {seenStatus}
+                    </span>
+                  )}
+                </div>
+                <div className="message-actions-row">
+                  <button className="message-action-btn-sm" onClick={() => copyText(msg.text, msg.id)} title="Copy">
+                    {copiedId === msg.id ? "Copied!" : "Copy"}
+                  </button>
+                  {msg.text.match(/https?:\/\//) && (
+                    <button className="message-action-btn-sm" onClick={() => {
+                      const url = msg.text.match(/(https?:\/\/[^\s]+)/)?.[0];
+                      if (url) window.open(url, "_blank");
+                    }} title="Open link">Open</button>
+                  )}
+                </div>
+              </div>
+            );
+          })}
           <div ref={messagesEndRef} />
         </div>
 
@@ -474,13 +404,9 @@ export default function ChatArea({ chatId, onBack }: ChatAreaProps) {
 
         {/* Message Input */}
         <div className="message-input-area">
-          <input
-            type="text"
-            placeholder="Type a message..."
-            value={messageInput}
+          <input type="text" placeholder="Type a message..." value={messageInput}
             onChange={(e) => { setMessageInput(e.target.value); handleTyping(); }}
-            onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(); } }}
-          />
+            onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(); } }} />
           <button className="btn-send" onClick={sendMessage} disabled={!messageInput.trim()}>
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z" />
@@ -507,23 +433,19 @@ export default function ChatArea({ chatId, onBack }: ChatAreaProps) {
 
       {/* Context Menu */}
       {contextMenu && (
-        <div
-          className="context-menu"
+        <div className="context-menu"
           style={{ position: "fixed", top: contextMenu.y, left: contextMenu.x, zIndex: 2000 }}
-          onClick={(e) => e.stopPropagation()}
-        >
+          onClick={(e) => e.stopPropagation()}>
           <button className="context-menu-item" onClick={() => {
             const msg = messages.find((m) => m.id === contextMenu.id);
             if (msg) copyText(msg.text, msg.id);
             setContextMenu(null);
           }}>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
-              <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" />
+              <rect x="9" y="9" width="13" height="13" rx="2" ry="2" /><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" />
             </svg>
             Copy
           </button>
-
           {contextMenu.isSent && (
             <button className="context-menu-item" onClick={() => {
               const msg = messages.find((m) => m.id === contextMenu.id);
@@ -531,33 +453,24 @@ export default function ChatArea({ chatId, onBack }: ChatAreaProps) {
               setContextMenu(null);
             }}>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" />
-                <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" />
+                <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" /><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" />
               </svg>
               Edit
             </button>
           )}
-
           <div className="context-menu-divider" />
-
-          <button className="context-menu-item" onClick={() => {
-            deleteForMe(contextMenu.id);
-            setContextMenu(null);
-          }}>
+          <button className="context-menu-item" onClick={() => { deleteForMe(contextMenu.id); setContextMenu(null); }}>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" />
             </svg>
             Delete for me
           </button>
-
           {contextMenu.isSent && (
             <button className="context-menu-item context-menu-item-danger" onClick={() => {
-              deleteForEveryone(contextMenu.id);
-              setContextMenu(null);
+              deleteForEveryone(contextMenu.id); setContextMenu(null);
             }}>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" />
-                <path d="M10 11v6M14 11v6" />
+                <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" /><path d="M10 11v6M14 11v6" />
               </svg>
               Delete for everyone
             </button>

@@ -40,3 +40,13 @@ export interface TypingData {
   name: string;
   timestamp: number;
 }
+
+export interface ChatRequest {
+  id?: string;
+  from: string;
+  fromName: string;
+  fromUsername: string;
+  to: string;
+  status: "pending" | "accepted" | "declined";
+  createdAt: Timestamp;
+}

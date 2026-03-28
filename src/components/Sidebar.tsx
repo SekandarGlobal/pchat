@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import {
   collection,
   query,
@@ -10,11 +10,16 @@ import {
   limit,
   getDocs,
   Timestamp,
+  doc,
+  updateDoc,
+  addDoc,
+  serverTimestamp,
+  deleteDoc,
 } from "firebase/firestore";
 import { ref, onValue } from "firebase/database";
 import { db, rtdb } from "@/lib/firebase";
 import { useAuth } from "@/lib/auth-context";
-import { ChatData, UserData, PresenceData } from "@/lib/types";
+import { ChatData, UserData, PresenceData, ChatRequest } from "@/lib/types";
 
 interface ChatListItem {
   id: string;
@@ -30,18 +35,16 @@ interface SidebarProps {
   onOpenChat: (chatId: string) => void;
   onSignOut: () => void;
   onUnreadChange?: (hasUnread: boolean) => void;
+  onShowNewChat?: () => void;
 }
 
-export default function Sidebar({ activeChatId, onOpenChat, onSignOut, onUnreadChange }: SidebarProps) {
+export default function Sidebar({ activeChatId, onOpenChat, onSignOut, onUnreadChange, onShowNewChat }: SidebarProps) {
   const { user } = useAuth();
   const [chats, setChats] = useState<ChatListItem[]>([]);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [searchResults, setSearchResults] = useState<(UserData & { id: string })[]>([]);
-  const [showSearch, setShowSearch] = useState(false);
   const [userNames, setUserNames] = useState<Record<string, UserData>>({});
   const [onlineUsers, setOnlineUsers] = useState<Record<string, boolean>>({});
   const [unreadChats, setUnreadChats] = useState<Set<string>>(new Set());
-  const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [chatRequests, setChatRequests] = useState<ChatRequest[]>([]);
   const fetchedUserIdsRef = useRef<Set<string>>(new Set());
 
   // Listen to user's chats
@@ -56,8 +59,8 @@ export default function Sidebar({ activeChatId, onOpenChat, onSignOut, onUnreadC
       const chatList: ChatListItem[] = [];
       const userIds = new Set<string>();
 
-      snapshot.docs.forEach((doc) => {
-        const chat = doc.data() as ChatData;
+      snapshot.docs.forEach((d) => {
+        const chat = d.data() as ChatData;
         let displayName = "Chat";
         let initial = "?";
         let otherUserId: string | null = null;
@@ -67,31 +70,18 @@ export default function Sidebar({ activeChatId, onOpenChat, onSignOut, onUnreadC
           initial = displayName.charAt(0).toUpperCase();
         } else {
           otherUserId = chat.participants.find((id) => id !== user.uid) || null;
-          if (otherUserId) {
-            userIds.add(otherUserId);
-          }
+          if (otherUserId) userIds.add(otherUserId);
         }
 
-        chatList.push({
-          id: doc.id,
-          chat,
-          displayName,
-          initial,
-          otherUserId,
-          hasUnread: false,
-        });
+        chatList.push({ id: d.id, chat, displayName, initial, otherUserId, hasUnread: false });
       });
 
-      // Fetch user names for direct chats
       userIds.forEach((uid) => {
         if (!fetchedUserIdsRef.current.has(uid)) {
           fetchedUserIdsRef.current.add(uid);
           getDocs(query(collection(db, "users"), where("__name__", "==", uid))).then((snap) => {
             if (!snap.empty) {
-              setUserNames((prev) => ({
-                ...prev,
-                [uid]: snap.docs[0].data() as UserData,
-              }));
+              setUserNames((prev) => ({ ...prev, [uid]: snap.docs[0].data() as UserData }));
             }
           });
         }
@@ -101,41 +91,76 @@ export default function Sidebar({ activeChatId, onOpenChat, onSignOut, onUnreadC
     });
   }, [user]);
 
-  // Memoize chat IDs for stable dependency
+  // Listen for incoming chat requests
+  useEffect(() => {
+    if (!user) return;
+    const q = query(
+      collection(db, "chatRequests"),
+      where("to", "==", user.uid),
+      where("status", "==", "pending")
+    );
+    return onSnapshot(q, (snapshot) => {
+      const requests: ChatRequest[] = [];
+      snapshot.docs.forEach((d) => {
+        requests.push({ id: d.id, ...(d.data() as Omit<ChatRequest, "id">) });
+      });
+      setChatRequests(requests);
+    });
+  }, [user]);
+
+  const acceptRequest = useCallback(async (req: ChatRequest) => {
+    if (!req.id || !user) return;
+    // Update request status
+    await updateDoc(doc(db, "chatRequests", req.id), { status: "accepted" });
+    // Create the chat
+    await addDoc(collection(db, "chats"), {
+      participants: [user.uid, req.from],
+      type: "direct",
+      createdBy: req.from,
+      createdAt: serverTimestamp(),
+      lastMessage: "",
+      lastMessageTime: serverTimestamp(),
+    });
+  }, [user]);
+
+  const declineRequest = useCallback(async (req: ChatRequest) => {
+    if (!req.id) return;
+    await updateDoc(doc(db, "chatRequests", req.id), { status: "declined" });
+  }, []);
+
+  const deleteRequest = useCallback(async (req: ChatRequest) => {
+    if (!req.id) return;
+    await deleteDoc(doc(db, "chatRequests", req.id));
+  }, []);
+
   const chatOtherUserIds = chats.map((c) => c.otherUserId).filter(Boolean).join(",");
   const chatIds = chats.map((c) => c.id).join(",");
 
-  // Listen for online status of chat partners
+  // Listen for online status
   useEffect(() => {
-    const unsubscribes: (() => void)[] = [];
+    const unsubs: (() => void)[] = [];
     chats.forEach((chat) => {
       if (chat.otherUserId) {
         const unsub = onValue(ref(rtdb, `online/${chat.otherUserId}`), (snap) => {
           const val = snap.val() as PresenceData | null;
-          setOnlineUsers((prev) => ({
-            ...prev,
-            [chat.otherUserId!]: val?.online || false,
-          }));
+          setOnlineUsers((prev) => ({ ...prev, [chat.otherUserId!]: val?.online || false }));
         });
-        unsubscribes.push(unsub);
+        unsubs.push(unsub);
       }
     });
-    return () => unsubscribes.forEach((u) => u());
+    return () => unsubs.forEach((u) => u());
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [chatOtherUserIds]);
 
-  // Listen for unread messages (messages not seen by current user)
+  // Listen for unread messages
   useEffect(() => {
     if (!user) return;
-    const unsubscribes: (() => void)[] = [];
-
+    const unsubs: (() => void)[] = [];
     chats.forEach((chatItem) => {
       if (chatItem.id === activeChatId) return;
-
       const msgQuery = query(
         collection(db, "chats", chatItem.id, "messages"),
-        orderBy("timestamp", "desc"),
-        limit(1)
+        orderBy("timestamp", "desc"), limit(1)
       );
       const unsub = onSnapshot(msgQuery, (snap) => {
         if (!snap.empty) {
@@ -146,19 +171,14 @@ export default function Sidebar({ activeChatId, onOpenChat, onSignOut, onUnreadC
           }
         }
       });
-      unsubscribes.push(unsub);
+      unsubs.push(unsub);
     });
-
-    return () => unsubscribes.forEach((u) => u());
+    return () => unsubs.forEach((u) => u());
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [chatIds, activeChatId, user]);
 
-  // Notify parent of unread state changes
-  useEffect(() => {
-    onUnreadChange?.(unreadChats.size > 0);
-  }, [unreadChats, onUnreadChange]);
+  useEffect(() => { onUnreadChange?.(unreadChats.size > 0); }, [unreadChats, onUnreadChange]);
 
-  // Mark as read when opening chat - using ref to avoid setState in effect
   const prevActiveChatRef = useRef<string | null>(null);
   useEffect(() => {
     if (activeChatId && activeChatId !== prevActiveChatRef.current) {
@@ -172,78 +192,33 @@ export default function Sidebar({ activeChatId, onOpenChat, onSignOut, onUnreadC
     }
   }, [activeChatId]);
 
-  // Search users
-  const handleSearch = useCallback(
-    (value: string) => {
-      setSearchQuery(value);
-      if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
-      if (!value || value.length < 2) {
-        setShowSearch(false);
-        setSearchResults([]);
-        return;
-      }
-      searchTimeoutRef.current = setTimeout(async () => {
-        const q = value.trim().toLowerCase();
-        const results: (UserData & { id: string })[] = [];
-        try {
-          const emailSnap = await getDocs(
-            query(collection(db, "users"), where("email", "==", q), limit(5))
-          );
-          emailSnap.docs.forEach((doc) => {
-            if (doc.id !== user?.uid) results.push({ id: doc.id, ...(doc.data() as UserData) });
-          });
-          const usernameSnap = await getDocs(
-            query(collection(db, "users"), where("username", "==", q), limit(5))
-          );
-          usernameSnap.docs.forEach((doc) => {
-            if (doc.id !== user?.uid && !results.find((r) => r.id === doc.id)) {
-              results.push({ id: doc.id, ...(doc.data() as UserData) });
-            }
-          });
-        } catch (err) {
-          console.error("Search error:", err);
-        }
-        setSearchResults(results);
-        setShowSearch(true);
-      }, 350);
-    },
-    [user]
-  );
-
   const formatTime = (timestamp: Timestamp) => {
     if (!timestamp) return "";
     const date = timestamp.toDate();
     const now = new Date();
     const diff = now.getTime() - date.getTime();
-    const dayMs = 86400000;
-    if (diff < dayMs && now.getDate() === date.getDate()) {
+    if (diff < 86400000 && now.getDate() === date.getDate())
       return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-    }
-    if (diff < 7 * dayMs) {
+    if (diff < 7 * 86400000)
       return ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][date.getDay()];
-    }
     return date.toLocaleDateString([], { month: "short", day: "numeric" });
   };
 
   const getDisplayName = (chatItem: ChatListItem) => {
     if (chatItem.chat.type === "group") return chatItem.displayName;
-    if (chatItem.otherUserId && userNames[chatItem.otherUserId]) {
+    if (chatItem.otherUserId && userNames[chatItem.otherUserId])
       return userNames[chatItem.otherUserId].name || userNames[chatItem.otherUserId].username;
-    }
     return chatItem.displayName;
   };
 
-  const getInitial = (chatItem: ChatListItem) => {
-    const name = getDisplayName(chatItem);
-    return name.charAt(0).toUpperCase();
-  };
+  const getInitial = (chatItem: ChatListItem) => getDisplayName(chatItem).charAt(0).toUpperCase();
 
   return (
     <div className="sidebar">
       <div className="sidebar-header">
-        <h3>Chats</h3>
+        <h3 className="sidebar-title">ZCHAT</h3>
         <div className="sidebar-actions">
-          <button className="btn-icon" onClick={() => document.getElementById("user-search-input")?.focus()} title="New Chat">
+          <button className="btn-icon" onClick={onShowNewChat} title="New Chat">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M12 5v14M5 12h14" />
             </svg>
@@ -256,56 +231,48 @@ export default function Sidebar({ activeChatId, onOpenChat, onSignOut, onUnreadC
         </div>
       </div>
 
-      <div className="search-container">
-        <input
-          id="user-search-input"
-          type="text"
-          placeholder="Search by username or email..."
-          value={searchQuery}
-          onChange={(e) => handleSearch(e.target.value)}
-        />
-      </div>
-
-      {showSearch && (
-        <div className="search-results active">
-          {searchResults.length === 0 ? (
-            <div className="search-no-results">No users found</div>
-          ) : (
-            searchResults.map((u) => (
-              <div
-                key={u.id}
-                className="search-result-item"
-                onClick={() => {
-                  onOpenChat(u.id);
-                  setSearchQuery("");
-                  setShowSearch(false);
-                }}
-              >
-                <div className="search-result-avatar">
-                  {(u.name || u.username || "?").charAt(0).toUpperCase()}
-                </div>
-                <div className="search-result-info">
-                  <div className="search-result-name">{u.name || "Unknown"}</div>
-                  <div className="search-result-username">@{u.username}</div>
-                </div>
+      {/* Chat Requests */}
+      {chatRequests.length > 0 && (
+        <div className="requests-section">
+          <div className="requests-title">Chat Requests</div>
+          {chatRequests.map((req) => (
+            <div key={req.id} className="request-item">
+              <div className="request-avatar">
+                {(req.fromName || req.fromUsername || "?").charAt(0).toUpperCase()}
               </div>
-            ))
-          )}
+              <div className="request-info">
+                <div className="request-name">{req.fromName}</div>
+                <div className="request-username">@{req.fromUsername}</div>
+              </div>
+              <div className="request-actions">
+                <button className="request-btn request-btn-accept" onClick={() => acceptRequest(req)} title="Accept">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                    <path d="M20 6L9 17l-5-5" />
+                  </svg>
+                </button>
+                <button className="request-btn request-btn-decline" onClick={() => declineRequest(req)} title="Decline">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                    <path d="M18 6L6 18M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+          ))}
         </div>
       )}
 
+      {/* Chat List */}
       <div className="chat-list">
-        {chats.length === 0 ? (
+        {chats.length === 0 && chatRequests.length === 0 ? (
           <div className="chat-list-empty">
             No conversations yet.
             <br />
-            Search for users to start chatting.
+            Tap + to find someone to chat with.
           </div>
         ) : (
           chats.map((chatItem) => {
             const hasUnread = unreadChats.has(chatItem.id);
             const isOnline = chatItem.otherUserId ? onlineUsers[chatItem.otherUserId] : false;
-
             return (
               <div
                 key={chatItem.id}
