@@ -29,9 +29,10 @@ interface SidebarProps {
   activeChatId: string | null;
   onOpenChat: (chatId: string) => void;
   onSignOut: () => void;
+  onUnreadChange?: (hasUnread: boolean) => void;
 }
 
-export default function Sidebar({ activeChatId, onOpenChat, onSignOut }: SidebarProps) {
+export default function Sidebar({ activeChatId, onOpenChat, onSignOut, onUnreadChange }: SidebarProps) {
   const { user } = useAuth();
   const [chats, setChats] = useState<ChatListItem[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
@@ -151,6 +152,11 @@ export default function Sidebar({ activeChatId, onOpenChat, onSignOut }: Sidebar
     return () => unsubscribes.forEach((u) => u());
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [chatIds, activeChatId, user]);
+
+  // Notify parent of unread state changes
+  useEffect(() => {
+    onUnreadChange?.(unreadChats.size > 0);
+  }, [unreadChats, onUnreadChange]);
 
   // Mark as read when opening chat - using ref to avoid setState in effect
   const prevActiveChatRef = useRef<string | null>(null);
