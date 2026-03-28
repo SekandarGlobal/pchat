@@ -13,8 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Next.js Template",
-  description: "A minimal Next.js starter template",
+  title: "ChatApp - Connect Instantly",
+  description: "Modern real-time chat application. Connect instantly, chat freely.",
 };
 
 export default function RootLayout({

@@ -1,87 +1,86 @@
-# Active Context: Next.js Starter Template
+# Active Context: ChatApp - Modern Real-time Chat
 
 ## Current State
 
-**Template Status**: ✅ Ready for development
+**Status**: ✅ Chat application fully implemented with modern React/Next.js architecture
 
-The template is a clean Next.js 16 starter with TypeScript and Tailwind CSS 4. It's ready for AI-assisted expansion to build any type of application.
+The application has been modernized from a legacy vanilla JS + Firebase chat app to a full Next.js 16 + React 19 + TypeScript application with Firebase backend.
 
 ## Recently Completed
 
-- [x] Base Next.js 16 setup with App Router
-- [x] TypeScript configuration with strict mode
-- [x] Tailwind CSS 4 integration
-- [x] ESLint configuration
-- [x] Memory bank documentation
-- [x] Recipe system for common features
+- [x] Firebase SDK v12 integration (Auth, Firestore, Realtime Database)
+- [x] TypeScript types for all data models
+- [x] Auth context with full auth flow (email/password, Google OAuth)
+- [x] Landing page with modern gradient design
+- [x] Sign In / Sign Up pages with error handling
+- [x] Profile setup flow (name + username)
+- [x] Sidebar with chat list, user search, online indicators
+- [x] **Unread message indicators** (green dot on chats with new messages)
+- [x] **Auto-scroll to latest message** (smart scroll detection)
+- [x] **Message seen status** (per-message "Seen" indicator)
+- [x] **Message editing** (right-click context menu)
+- [x] **Message deletion** (soft delete for individual users)
+- [x] **Typing indicators** (animated dots with user names)
+- [x] **Online presence** (green dot on avatars for online users)
+- [x] **Mobile responsive** (sidebar toggle, back button, touch-friendly)
+- [x] Modern dark theme with smooth animations
+- [x] Fixed message input at bottom (doesn't move on scroll)
 
 ## Current Structure
 
-| File/Directory | Purpose | Status |
-|----------------|---------|--------|
-| `src/app/page.tsx` | Home page | ✅ Ready |
-| `src/app/layout.tsx` | Root layout | ✅ Ready |
-| `src/app/globals.css` | Global styles | ✅ Ready |
-| `.kilocode/` | AI context & recipes | ✅ Ready |
+| File/Directory | Purpose |
+|----------------|---------|
+| `src/app/page.tsx` | Main entry - auth state router |
+| `src/app/layout.tsx` | Root layout with Geist fonts |
+| `src/app/globals.css` | Full modern CSS with dark theme |
+| `src/lib/firebase.ts` | Firebase config and exports |
+| `src/lib/types.ts` | TypeScript interfaces |
+| `src/lib/auth-context.tsx` | Auth state management |
+| `src/components/LandingPage.tsx` | Landing/hero page |
+| `src/components/AuthPage.tsx` | Sign in/up forms |
+| `src/components/SetupPage.tsx` | Profile setup (name/username) |
+| `src/components/Sidebar.tsx` | Chat list, search, indicators |
+| `src/components/ChatArea.tsx` | Messages, input, edit/delete |
+| `src/components/ChatPage.tsx` | Main layout (sidebar + chat) |
 
-## Current Focus
+## Features Implemented
 
-The template is ready. Next steps depend on user requirements:
+### Core Messaging
+- Real-time message sync via Firestore
+- Send/receive messages instantly
+- Auto-scroll to newest messages
+- Smart scroll detection (won't auto-scroll if user scrolled up)
 
-1. What type of application to build
-2. What features are needed
-3. Design/branding preferences
+### Message Actions
+- Edit own messages (right-click menu)
+- Delete messages (soft delete per user)
+- "Edited" label on modified messages
+- "Seen" status with checkmark icon
 
-## Quick Start Guide
+### Presence & Notifications
+- Green dot on avatar for online users
+- Green dot on chat list for unread messages
+- Dot disappears when chat is opened
+- Typing indicators with animated dots
 
-### To add a new page:
+### Navigation
+- Sidebar with all conversations
+- User search by email or username
+- Mobile-responsive sidebar toggle
+- Back button on mobile for navigation
 
-Create a file at `src/app/[route]/page.tsx`:
-```tsx
-export default function NewPage() {
-  return <div>New page content</div>;
-}
-```
-
-### To add components:
-
-Create `src/components/` directory and add components:
-```tsx
-// src/components/ui/Button.tsx
-export function Button({ children }: { children: React.ReactNode }) {
-  return <button className="px-4 py-2 bg-blue-600 text-white rounded">{children}</button>;
-}
-```
-
-### To add a database:
-
-Follow `.kilocode/recipes/add-database.md`
-
-### To add API routes:
-
-Create `src/app/api/[route]/route.ts`:
-```tsx
-import { NextResponse } from "next/server";
-
-export async function GET() {
-  return NextResponse.json({ message: "Hello" });
-}
-```
-
-## Available Recipes
-
-| Recipe | File | Use Case |
-|--------|------|----------|
-| Add Database | `.kilocode/recipes/add-database.md` | Data persistence with Drizzle + SQLite |
-
-## Pending Improvements
-
-- [ ] Add more recipes (auth, email, etc.)
-- [ ] Add example components
-- [ ] Add testing setup recipe
+### UI/UX
+- Modern dark theme (black/blue accent)
+- Smooth animations (message entry, modals, typing dots)
+- Context menus for message actions
+- Loading spinner during auth
+- Responsive at 768px and 480px breakpoints
 
 ## Session History
 
 | Date | Changes |
 |------|---------|
-| Initial | Template created with base setup |
+| Initial | Legacy vanilla JS + Firebase chat app |
+| 2026-03-28 | Full modernization to Next.js 16 + React 19 + TypeScript |
+| 2026-03-28 | Added unread indicators, seen status, auto-scroll |
+| 2026-03-28 | Added edit/delete with context menu, modern dark theme |
