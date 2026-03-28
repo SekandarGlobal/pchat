@@ -194,16 +194,6 @@ export default function ChatPage() {
         </div>
       )}
 
-      {/* FAB - only on chats list, not in chat or search */}
-      {!isInChat && mobileTab !== TAB_SEARCH && (
-        <button className="fab-new-chat" onClick={() => handleMobileTabChange(TAB_SEARCH)} title="Find People">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <circle cx="11" cy="11" r="8" />
-            <path d="M21 21l-4.35-4.35" />
-          </svg>
-        </button>
-      )}
-
       {/* Mobile bottom nav - hidden when in chat or search */}
       {!isInChat && mobileTab !== TAB_SEARCH && (
         <div className="mobile-bottom-nav">

@@ -302,7 +302,7 @@ export default function ChatArea({ chatId, onBack }: ChatAreaProps) {
       <div className="chat-active">
         {/* Chat Header - username at top, typing below it */}
         <div className="chat-header">
-          <button className="btn-back-sidebar mobile-only" onClick={onBack}>
+          <button className="btn-back-sidebar" onClick={onBack}>
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M19 12H5M12 19l-7-7 7-7" />
             </svg>

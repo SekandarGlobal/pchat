@@ -211,7 +211,7 @@ html { height: 100%; }
 .btn-send:hover:not(:disabled) { background: var(--accent-hover); transform: scale(1.05); }
 .btn-send:disabled { background: var(--border-color); color: var(--text-muted); cursor: not-allowed; }
 .btn-back-sidebar {
-  display: none; background: none; border: none; color: var(--text-primary);
+  display: flex; background: none; border: none; color: var(--text-primary);
   cursor: pointer; padding: 8px; border-radius: var(--radius);
   transition: background var(--transition); flex-shrink: 0;
 }
@@ -654,18 +654,7 @@ html { height: 100%; }
 .request-btn-decline { background: rgba(239, 68, 68, 0.15); color: var(--danger); }
 .request-btn-decline:hover { background: rgba(239, 68, 68, 0.3); }
 
-/* ========== FAB ========== */
-.fab-new-chat {
-  display: none; position: fixed; bottom: 24px; right: 24px;
-  width: 56px; height: 56px; border-radius: 50%; border: none;
-  background: var(--accent); color: white; cursor: pointer;
-  align-items: center; justify-content: center;
-  box-shadow: 0 4px 20px rgba(37, 99, 235, 0.4);
-  transition: all var(--transition); z-index: 40;
-}
-.fab-new-chat:hover {
-  background: var(--accent-hover); transform: scale(1.1);
-}
+/* ========== FAB - REMOVED ========== */
 
 /* ========== MOBILE BOTTOM NAV ========== */
 .mobile-bottom-nav {
@@ -721,8 +710,7 @@ html { height: 100%; }
   /* Show back button in chat on mobile */
   .btn-back-sidebar { display: flex !important; }
 
-  /* Show bottom nav, FAB, search page elements */
-  .fab-new-chat { display: flex; bottom: 80px; }
+  /* Show bottom nav */
   .mobile-bottom-nav { display: block; }
 
   .message-wrapper { max-width: 85%; }
