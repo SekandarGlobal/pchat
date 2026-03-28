@@ -218,11 +218,24 @@ export default function ChatArea({ chatId, onBack }: ChatAreaProps) {
   );
 
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const handleTouchStart = useCallback((msgId: string, isSent: boolean) => {
+  const longPressStartPos = useRef<{ x: number; y: number } | null>(null);
+
+  const handleTouchStart = useCallback((e: React.TouchEvent, msgId: string, isSent: boolean) => {
+    const touch = e.touches[0];
+    longPressStartPos.current = { x: touch.clientX, y: touch.clientY };
     longPressTimer.current = setTimeout(() => {
-      setContextMenu({ id: msgId, x: 60, y: window.innerHeight / 2 - 100, isSent });
+      const pos = longPressStartPos.current;
+      if (pos) {
+        setContextMenu({
+          id: msgId,
+          x: Math.max(16, Math.min(pos.x - 90, window.innerWidth - 200)),
+          y: Math.max(16, Math.min(pos.y - 100, window.innerHeight - 250)),
+          isSent,
+        });
+      }
     }, 500);
   }, []);
+
   const handleTouchEnd = useCallback(() => {
     if (longPressTimer.current) clearTimeout(longPressTimer.current);
   }, []);
@@ -369,7 +382,7 @@ export default function ChatArea({ chatId, onBack }: ChatAreaProps) {
             return (
               <div key={msg.id} className={`message-wrapper ${isSent ? "sent" : "received"}`}
                 onContextMenu={(e) => handleContextMenu(e, msg.id, isSent)}
-                onTouchStart={() => handleTouchStart(msg.id, isSent)}
+                onTouchStart={(e) => handleTouchStart(e, msg.id, isSent)}
                 onTouchEnd={handleTouchEnd} onTouchCancel={handleTouchEnd}>
                 {chatData?.type === "group" && !isSent && (
                   <div className="message-sender-name">{msg.senderName}</div>
