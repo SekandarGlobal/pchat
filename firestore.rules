@@ -1,13 +1,11 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Users collection - authenticated users can read all, write only their own
     match /users/{userId} {
       allow read: if request.auth != null;
       allow write: if request.auth != null && request.auth.uid == userId;
     }
 
-    // Chats collection - authenticated users can read/write chats they participate in
     match /chats/{chatId} {
       allow read: if request.auth != null;
       allow create: if request.auth != null
@@ -16,7 +14,6 @@ service cloud.firestore {
                     && resource.data.participants.hasAny([request.auth.uid]);
       allow delete: if false;
 
-      // Messages subcollection
       match /messages/{messageId} {
         allow read: if request.auth != null
                     && get(/databases/$(database)/documents/chats/$(chatId)).data.participants.hasAny([request.auth.uid]);
@@ -26,6 +23,15 @@ service cloud.firestore {
                       && get(/databases/$(database)/documents/chats/$(chatId)).data.participants.hasAny([request.auth.uid]);
         allow delete: if false;
       }
+    }
+
+    match /chatRequests/{requestId} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null && request.resource.data.from == request.auth.uid;
+      allow update: if request.auth != null
+                    && (resource.data.from == request.auth.uid || resource.data.to == request.auth.uid);
+      allow delete: if request.auth != null
+                    && (resource.data.from == request.auth.uid || resource.data.to == request.auth.uid);
     }
   }
 }
