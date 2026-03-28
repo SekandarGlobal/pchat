@@ -216,7 +216,9 @@ export default function Sidebar({ activeChatId, onOpenChat, onSignOut, onUnreadC
   return (
     <div className="sidebar">
       <div className="sidebar-header">
-        <h3 className="sidebar-title">ZCHAT</h3>
+        <div className="sidebar-header-left">
+          <h3 className="sidebar-title">ZCHAT</h3>
+        </div>
         <div className="sidebar-actions">
           <button className="btn-icon" onClick={onShowNewChat} title="New Chat">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">

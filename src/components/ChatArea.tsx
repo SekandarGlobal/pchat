@@ -287,22 +287,30 @@ export default function ChatArea({ chatId, onBack }: ChatAreaProps) {
   return (
     <div className="chat-main">
       <div className="chat-active">
-        {/* Chat Header - always shows back button */}
+        {/* Chat Header - username at top, typing below it */}
         <div className="chat-header">
-          <button className="btn-back-sidebar" onClick={onBack} style={{ display: "flex" }}>
+          <button className="btn-back-sidebar mobile-only" onClick={onBack}>
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M19 12H5M12 19l-7-7 7-7" />
             </svg>
           </button>
           <div className="chat-header-info">
-            <h3>{otherUserName || "Chat"}</h3>
-            {chatData?.type === "direct" ? (
-              <span className={`status-text ${otherUserOnline ? "online" : ""}`}>
-                {otherUserOnline ? "Online" : "Offline"}
-              </span>
-            ) : (
-              <span className="status-text">{chatData?.participants.length} members</span>
-            )}
+            <h3 className="chat-username">{otherUserName || "Chat"}</h3>
+            <div className="chat-header-sub">
+              {chatData?.type === "direct" ? (
+                <span className={`status-text ${otherUserOnline ? "online" : ""}`}>
+                  {otherUserOnline ? "Online" : "Offline"}
+                </span>
+              ) : (
+                <span className="status-text">{chatData?.participants.length} members</span>
+              )}
+              {typingUsers.length > 0 && (
+                <span className="typing-inline">
+                  <span className="typing-dots-inline"><i /><i /><i /></span>
+                  {typingUsers.join(", ")}{typingUsers.length === 1 ? " typing" : " typing"}
+                </span>
+              )}
+            </div>
           </div>
           {chatData?.type === "group" && (
             <div className="chat-header-actions">
@@ -394,15 +402,7 @@ export default function ChatArea({ chatId, onBack }: ChatAreaProps) {
           <div ref={messagesEndRef} />
         </div>
 
-        {/* Typing indicator */}
-        {typingUsers.length > 0 && (
-          <div className="typing-indicator">
-            <span className="typing-dots"><span /><span /><span /></span>
-            {typingUsers.join(", ")}{typingUsers.length === 1 ? " is" : " are"} typing...
-          </div>
-        )}
-
-        {/* Message Input */}
+        {/* Message Input - always at bottom */}
         <div className="message-input-area">
           <input type="text" placeholder="Type a message..." value={messageInput}
             onChange={(e) => { setMessageInput(e.target.value); handleTyping(); }}
