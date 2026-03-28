@@ -17,7 +17,7 @@ import {
   signOut,
 } from "firebase/auth";
 import { doc, getDoc, setDoc, updateDoc } from "firebase/firestore";
-import { ref, set, remove, onDisconnect, serverTimestamp as rtdbTimestamp } from "firebase/database";
+import { ref, set, remove, onDisconnect } from "firebase/database";
 import { auth, db, rtdb, googleProvider } from "./firebase";
 import { UserData } from "./types";
 
@@ -85,10 +85,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const setupPresence = useCallback((uid: string) => {
     const onlineRef = ref(rtdb, `online/${uid}`);
-    set(onlineRef, { online: true, lastSeen: rtdbTimestamp });
+    set(onlineRef, { online: true, lastSeen: Date.now() });
     onDisconnect(onlineRef).set({
       online: false,
-      lastSeen: rtdbTimestamp,
+      lastSeen: Date.now(),
     });
   }, []);
 

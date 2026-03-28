@@ -22,7 +22,6 @@ import {
   onValue,
   set,
   remove,
-  serverTimestamp as rtdbTimestamp,
 } from "firebase/database";
 import { db, rtdb } from "@/lib/firebase";
 import { useAuth } from "@/lib/auth-context";
@@ -169,7 +168,7 @@ export default function ChatArea({ chatId, onStartChat }: ChatAreaProps) {
     set(ref(rtdb, `typing/${user.uid}`), {
       chatId,
       name: userData.name || userData.username,
-      timestamp: rtdbTimestamp,
+      timestamp: Date.now(),
     });
     if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
     typingTimeoutRef.current = setTimeout(() => {
