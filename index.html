@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ChatApp</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+</head>
+<body>
+
+<!-- Landing Page -->
+<div id="page-landing" class="page active">
+    <div class="landing-container">
+        <div class="landing-hero">
+            <div class="logo">ChatApp</div>
+            <p class="tagline">Connect instantly. Chat freely.</p>
+            <div class="landing-buttons">
+                <button class="btn btn-primary" onclick="navigateTo('signin')">Sign In</button>
+                <button class="btn btn-outline" onclick="navigateTo('signup')">Sign Up</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Sign In Page -->
+<div id="page-signin" class="page">
+    <div class="auth-container">
+        <button class="back-btn" onclick="navigateTo('landing')">&#8592; Back</button>
+        <h2>Sign In</h2>
+        <div id="signin-error" class="error-msg"></div>
+        <form id="signin-form" onsubmit="handleSignIn(event)">
+            <div class="form-group">
+                <label for="signin-email">Email</label>
+                <input type="email" id="signin-email" required placeholder="you@example.com" autocomplete="email">
+            </div>
+            <div class="form-group">
+                <label for="signin-password">Password</label>
+                <input type="password" id="signin-password" required placeholder="Your password" autocomplete="current-password">
+            </div>
+            <button type="submit" class="btn btn-primary btn-full" id="signin-btn">Sign In</button>
+        </form>
+        <div class="divider"><span>or</span></div>
+        <button class="btn btn-google btn-full" onclick="signInWithGoogle()">
+            <svg class="google-icon" viewBox="0 0 24 24" width="18" height="18">
+                <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/>
+                <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+                <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
+                <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+            </svg>
+            Continue with Google
+        </button>
+        <p class="auth-switch">Don't have an account? <a href="#" onclick="navigateTo('signup')">Sign Up</a></p>
+    </div>
+</div>
+
+<!-- Sign Up Page -->
+<div id="page-signup" class="page">
+    <div class="auth-container">
+        <button class="back-btn" onclick="navigateTo('landing')">&#8592; Back</button>
+        <h2>Create Account</h2>
+        <div id="signup-error" class="error-msg"></div>
+        <form id="signup-form" onsubmit="handleSignUp(event)">
+            <div class="form-group">
+                <label for="signup-email">Email</label>
+                <input type="email" id="signup-email" required placeholder="you@example.com" autocomplete="email">
+            </div>
+            <div class="form-group">
+                <label for="signup-password">Password</label>
+                <input type="password" id="signup-password" required placeholder="Min 6 characters" minlength="6" autocomplete="new-password">
+            </div>
+            <button type="submit" class="btn btn-primary btn-full" id="signup-btn">Sign Up</button>
+        </form>
+        <div class="divider"><span>or</span></div>
+        <button class="btn btn-google btn-full" onclick="signInWithGoogle()">
+            <svg class="google-icon" viewBox="0 0 24 24" width="18" height="18">
+                <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/>
+                <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+                <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
+                <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+            </svg>
+            Continue with Google
+        </button>
+        <p class="auth-switch">Already have an account? <a href="#" onclick="navigateTo('signin')">Sign In</a></p>
+    </div>
+</div>
+
+<!-- Name Setup Page -->
+<div id="page-setup-name" class="page">
+    <div class="setup-container">
+        <div class="setup-step">Step 1 of 2</div>
+        <h2>What's your name?</h2>
+        <p class="setup-desc">This is how others will see you in chats.</p>
+        <div id="name-error" class="error-msg"></div>
+        <form onsubmit="submitName(event)">
+            <div class="form-group">
+                <label for="setup-name">Display Name</label>
+                <input type="text" id="setup-name" required placeholder="Your name" maxlength="50">
+            </div>
+            <button type="submit" class="btn btn-primary btn-full">Continue</button>
+        </form>
+    </div>
+</div>
+
+<!-- Username Setup Page -->
+<div id="page-setup-username" class="page">
+    <div class="setup-container">
+        <div class="setup-step">Step 2 of 2</div>
+        <h2>Choose a username</h2>
+        <p class="setup-desc">Others can find you by your username.</p>
+        <div id="username-error" class="error-msg"></div>
+        <form onsubmit="submitUsername(event)">
+            <div class="form-group">
+                <label for="setup-username">Username</label>
+                <input type="text" id="setup-username" required placeholder="e.g. john_doe" pattern="[a-zA-Z0-9_]+" title="Letters, numbers, and underscores only" maxlength="30">
+            </div>
+            <button type="submit" class="btn btn-primary btn-full" id="username-btn">Finish Setup</button>
+        </form>
+    </div>
+</div>
+
+<!-- Chat Page -->
+<div id="page-chat" class="page">
+    <div class="chat-layout">
+        <!-- Sidebar -->
+        <div class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <h3>Chats</h3>
+                <div class="sidebar-actions">
+                    <button class="btn-icon" onclick="showNewChatModal()" title="New Chat">+</button>
+                    <button class="btn-icon" onclick="showNewGroupModal()" title="New Group">&#9673;</button>
+                    <button class="btn-icon btn-signout" onclick="signOutUser()" title="Sign Out">&#8594;</button>
+                </div>
+            </div>
+            <div class="search-container">
+                <input type="text" id="user-search" placeholder="Search by username or email..." oninput="searchUsers(this.value)">
+            </div>
+            <div id="search-results" class="search-results"></div>
+            <div id="chat-list" class="chat-list"></div>
+        </div>
+
+        <!-- Chat Main Area -->
+        <div class="chat-main" id="chat-main">
+            <div class="no-chat-selected" id="no-chat">
+                <div class="no-chat-icon">&#128172;</div>
+                <h3>Welcome to ChatApp</h3>
+                <p>Search for users or select a chat to start messaging</p>
+            </div>
+
+            <div class="chat-active" id="chat-active" style="display:none">
+                <div class="chat-header">
+                    <button class="btn-back-sidebar" onclick="closeChat()">&#8592;</button>
+                    <div class="chat-header-info">
+                        <h3 id="chat-header-name"></h3>
+                        <span id="chat-header-status" class="status-text"></span>
+                    </div>
+                    <div class="chat-header-actions">
+                        <button class="btn-icon" id="btn-add-member" onclick="showAddMemberModal()" title="Add Member" style="display:none">+</button>
+                    </div>
+                </div>
+                <div class="messages-container" id="messages-container"></div>
+                <div id="typing-indicator" class="typing-indicator"></div>
+                <div class="message-input-area">
+                    <input type="text" id="message-input" placeholder="Type a message..." onkeydown="handleMessageKeydown(event)" oninput="handleTyping()">
+                    <button class="btn-send" onclick="sendMessage()">&#10148;</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Message Modal -->
+<div id="edit-modal" class="modal" style="display:none">
+    <div class="modal-content">
+        <h3>Edit Message</h3>
+        <div class="form-group">
+            <textarea id="edit-message-input" rows="3"></textarea>
+        </div>
+        <div class="modal-actions">
+            <button class="btn btn-outline" onclick="closeEditModal()">Cancel</button>
+            <button class="btn btn-primary" onclick="saveEditedMessage()">Save</button>
+        </div>
+    </div>
+</div>
+
+<!-- New Group Modal -->
+<div id="group-modal" class="modal" style="display:none">
+    <div class="modal-content">
+        <h3>Create Group</h3>
+        <div class="form-group">
+            <label for="group-name-input">Group Name</label>
+            <input type="text" id="group-name-input" placeholder="Group name" maxlength="50">
+        </div>
+        <div class="form-group">
+            <label>Add Members</label>
+            <input type="text" id="group-member-search" placeholder="Search by username or email..." oninput="searchGroupMembers(this.value)">
+            <div id="group-search-results" class="search-results"></div>
+        </div>
+        <div id="group-selected-members" class="selected-members"></div>
+        <div class="modal-actions">
+            <button class="btn btn-outline" onclick="closeGroupModal()">Cancel</button>
+            <button class="btn btn-primary" onclick="createGroup()">Create Group</button>
+        </div>
+    </div>
+</div>
+
+<!-- Add Member Modal -->
+<div id="add-member-modal" class="modal" style="display:none">
+    <div class="modal-content">
+        <h3>Add Member to Group</h3>
+        <div class="form-group">
+            <input type="text" id="add-member-search" placeholder="Search by username or email..." oninput="searchAddMembers(this.value)">
+            <div id="add-member-search-results" class="search-results"></div>
+        </div>
+        <div class="modal-actions">
+            <button class="btn btn-outline" onclick="closeAddMemberModal()">Cancel</button>
+        </div>
+    </div>
+</div>
+
+<script src="scripts.js"></script>
+</body>
+</html>
