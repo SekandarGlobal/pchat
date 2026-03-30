@@ -20,3 +20,6 @@ export const auth = getAuth(app);
 export const db = getFirestore(app);
 export const rtdb = getDatabase(app);
 export const googleProvider = new GoogleAuthProvider();
+googleProvider.setCustomParameters({
+  client_id: "655863310444-o5ssj5j8otijm5im1d5fcoc2cb3duckp.apps.googleusercontent.com",
+});
