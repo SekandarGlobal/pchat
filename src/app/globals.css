@@ -217,6 +217,15 @@ html { height: 100%; }
 }
 .btn-back-sidebar:hover { background: rgba(255,255,255,0.1); }
 
+/* Close/exit chat button */
+.btn-back-chat {
+  display: flex; align-items: center; justify-content: center;
+  width: 40px; height: 40px; border-radius: 50%; border: none;
+  background: rgba(255,255,255,0.08); color: var(--text-primary);
+  cursor: pointer; flex-shrink: 0; transition: all var(--transition);
+}
+.btn-back-chat:hover { background: rgba(255,255,255,0.15); }
+
 /* ========== AUTH / SETUP ========== */
 .auth-container, .setup-container {
   max-width: 420px; margin: 0 auto; padding: 40px 24px; width: 100%;
@@ -709,6 +718,9 @@ html { height: 100%; }
 
   /* Show back button in chat on mobile */
   .btn-back-sidebar { display: flex !important; }
+  .btn-back-chat {
+    width: 44px; height: 44px;
+  }
 
   /* Show bottom nav */
   .mobile-bottom-nav { display: block; }
