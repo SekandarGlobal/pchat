@@ -377,8 +377,8 @@ html { height: 100%; }
 /* ========== CHAT MAIN ========== */
 .chat-main {
   flex: 1; display: flex; flex-direction: column;
-  background: var(--bg-chat); height: 100%; width: 100%;
-  overflow: hidden;
+  background: var(--bg-chat);
+  overflow: hidden; min-height: 0;
 }
 .no-chat-selected {
   flex: 1; display: flex; flex-direction: column; align-items: center;
@@ -399,8 +399,9 @@ html { height: 100%; }
   font-size: 14px; color: var(--text-muted); opacity: 0.5;
 }
 .chat-active {
-  display: flex; flex-direction: column; height: 100%; width: 100%;
-  overflow: hidden;
+  display: flex; flex-direction: column;
+  overflow: hidden; min-height: 0;
+  flex: 1;
 }
 
 /* ========== CHAT HEADER ========== */
@@ -448,6 +449,7 @@ html { height: 100%; }
 .messages-container {
   flex: 1; overflow-y: auto; padding: 16px;
   display: flex; flex-direction: column; gap: 6px; width: 100%;
+  min-height: 0;
 }
 .message-wrapper {
   display: flex; flex-direction: column; max-width: 75%;
